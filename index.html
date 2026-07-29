@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COLO AHU 冷卻模式模擬器</title>
+<title>COLO 冷卻模式模擬器</title>
 <style>
   :root {
     --bg:#0f172a; --card:#1e293b; --line:#334155;
@@ -179,7 +179,7 @@
 </head>
 <body>
 <div id="stage">
-  <h1>COLO AHU 冷卻模式模擬器</h1>
+  <h1>COLO 冷卻模式模擬器</h1>
   <div class="sub">調整 OAT / OADP / OARH，即時判斷運轉模式，底圖依模式顯示風門開合與氣流方向。</div>
 
   <!-- 風路示意圖 -->
@@ -408,6 +408,7 @@
 
     <div style="margin-top:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
       <button type="button" id="fetchWeather" class="btn" style="margin-top:0;">帶入龜山區即時天氣</button>
+      <label class="toggle" style="margin-top:0;" title="每 10 分鐘自動重抓一次即時天氣"><input type="checkbox" id="autoWeather">自動更新（10分）</label>
       <div class="legend" style="flex:1; display:flex; flex-wrap:wrap; justify-content:center; gap:8px 30px;">
         <span><i style="background:#3b82f6"></i>冷送風</span>
         <span><i style="background:#ef4444"></i>熱回風</span>
@@ -480,7 +481,7 @@
     <div>資料來源：25_05_01-Sequence-of-Operation-for-HVAC_C6_20240828</div>
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
       <span>最後維護日期：2026-07-29</span>
-      <span>版本：V1.95</span>
+      <span>版本：V2.0</span>
     </div>
   </footer>
 </div><!-- /#stage -->
@@ -736,14 +737,14 @@ function clearLive(){
 function editOAT(v){
   writeVal("oat", "oatNum", v, true);
   writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
-  clearLive();
+  clearLive(); saveParams();
   render();
 }
 // 修改 RH：保持 OAT，重算 DP
 function editRH(v){
   writeVal("oarh", "oarhNum", v, false);
   writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
-  clearLive();
+  clearLive(); saveParams();
   render();
 }
 // 修改 DP：保持 OAT，重算 RH（DP 不可高於 OAT）
@@ -751,7 +752,7 @@ function editDP(v){
   const oat = num("oat");
   writeVal("oadp", "oadpNum", Math.min(oat, v), true);
   writeVal("oarh", "oarhNum", calcRH(oat, num("oadp")), false);
-  clearLive();
+  clearLive(); saveParams();
   render();
 }
 
@@ -761,8 +762,8 @@ function bind(ids, handler){
 bind(["oat", "oatNum"], editOAT);
 bind(["oarh", "oarhNum"], editRH);
 bind(["oadp", "oadpNum"], editDP);
-$("typhoon").addEventListener("change", render);
-$("forceTrim").addEventListener("change", render);
+$("typhoon").addEventListener("change", function(){ saveParams(); render(); });
+$("forceTrim").addEventListener("change", function(){ saveParams(); render(); });
 
 // ===== 即時天氣（Open-Meteo，免金鑰）=====
 const SITE = { lat:25.0375, lon:121.3378 };   // 桃園市龜山區約略座標
@@ -785,6 +786,7 @@ async function fetchWeather(){
     writeVal("oarh", "oarhNum", rh, false);
     writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
     render();
+    saveParams();
     $("liveBadge").classList.add("show");   // 上方顯示 LIVE
     clearTimeout(liveTimer);                 // 1 分鐘後自動解除 LIVE（資料視為過期）
     liveTimer = setTimeout(function(){ $("liveBadge").classList.remove("show"); }, 60000);
@@ -802,6 +804,41 @@ async function fetchWeather(){
 }
 $("fetchWeather").addEventListener("click", fetchWeather);
 
+// ===== 自動更新（每 10 分鐘）=====
+let autoTimer = null;
+function toggleAuto(){
+  clearInterval(autoTimer);
+  if ($("autoWeather").checked){
+    fetchWeather();                               // 立即抓一次
+    autoTimer = setInterval(fetchWeather, 600000); // 每 10 分鐘
+  }
+  saveParams();
+}
+$("autoWeather").addEventListener("change", toggleAuto);
+
+// ===== 記住上次輸入（localStorage）=====
+function saveParams(){
+  try {
+    localStorage.setItem("coloParams", JSON.stringify({
+      oat:num("oat"), oarh:num("oarh"),
+      typhoon:$("typhoon").checked, forceTrim:$("forceTrim").checked,
+      auto:$("autoWeather").checked
+    }));
+  } catch(e){}
+}
+function loadParams(){
+  try {
+    const p = JSON.parse(localStorage.getItem("coloParams") || "null");
+    if (p && isFinite(p.oat) && isFinite(p.oarh)){
+      writeVal("oat", "oatNum", p.oat, true);
+      writeVal("oarh", "oarhNum", p.oarh, false);
+      $("typhoon").checked = !!p.typhoon;
+      $("forceTrim").checked = !!p.forceTrim;
+      $("autoWeather").checked = !!p.auto;
+    }
+  } catch(e){}
+}
+
 // ===== 自動縮放至單一螢幕（上下左右填滿，設計寬 1902）=====
 const stageEl = document.getElementById("stage");
 function fitStage(){
@@ -816,10 +853,12 @@ function fitStage(){
 window.addEventListener("resize", fitStage);
 window.addEventListener("load", fitStage);
 
-// 初始化：依 OAT + RH 使 DP 一致，並設定初始模式
+// 初始化：先載入上次輸入，再依 OAT + RH 使 DP 一致、設定初始模式
+loadParams();
 writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
 currentMode = initialMode(num("oat"), num("oadp"), num("oarh"), $("typhoon").checked, $("forceTrim").checked);
 render();
+if ($("autoWeather").checked) toggleAuto();   // 還原自動更新
 </script>
 </body>
 </html>
