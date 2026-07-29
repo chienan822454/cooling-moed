@@ -24,6 +24,22 @@
   .diagram-card { margin:0 0 20px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
   @media(max-width:820px){ .grid{ grid-template-columns:1fr; } }
+  /* 桌機：自動壓縮到單一頁面（限圖高、縮邊距） */
+  @media(min-width:821px){
+    body { padding:12px 20px; }
+    h1 { font-size:18px; margin:0 0 2px; }
+    .sub { margin-bottom:8px; font-size:12px; }
+    .diagram-card { margin-bottom:12px; }
+    .diagram-card .svg-scroll svg { width:auto; height:46vh; max-width:100%; margin:0 auto; }
+    .grid { gap:16px; }
+    .card { padding:14px; }
+    .card h2 { margin-bottom:10px; }
+    .ctrl { margin-bottom:10px; }
+    .mode-banner { padding:12px; margin-bottom:12px; font-size:20px; }
+    .cico-wrap { margin-top:10px; }
+    .equip-grid .item { padding:5px 2px; }
+    footer { margin-top:10px !important; padding-top:6px !important; }
+  }
   .card h2 { font-size:14px; margin:0 0 14px; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; }
   .ctrl { margin-bottom:18px; }
   .ctrl label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
@@ -459,7 +475,7 @@
     <div>資料來源：25_05_01-Sequence-of-Operation-for-HVAC_C6_20240828</div>
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
       <span>最後維護日期：2026-07-29</span>
-      <span>版本：V1.6</span>
+      <span>版本：V1.7</span>
     </div>
   </footer>
 
