@@ -30,7 +30,7 @@
   @media(min-width:821px){
     html, body { overflow:hidden; }
     body { padding:0; }
-    #stage { position:absolute; top:0; left:0; width:1500px; padding:16px 24px; }
+    #stage { position:absolute; top:0; left:0; width:1280px; padding:16px 24px; }
     h1 { font-size:18px; margin:0 0 2px; }
     .sub { margin-bottom:8px; font-size:12px; }
     .diagram-card { margin-bottom:12px; }
@@ -480,7 +480,7 @@
     <div>資料來源：25_05_01-Sequence-of-Operation-for-HVAC_C6_20240828</div>
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
       <span>最後維護日期：2026-07-29</span>
-      <span>版本：V1.93</span>
+      <span>版本：V1.94</span>
     </div>
   </footer>
 </div><!-- /#stage -->
@@ -808,7 +808,7 @@ function fitStage(){
   if (!stageEl) return;
   if (window.innerWidth < 821){ stageEl.style.transform = ""; return; }   // 小螢幕不縮放（正常排版）
   stageEl.style.transform = "none";
-  const w = 1500, h = stageEl.scrollHeight;
+  const w = 1280, h = stageEl.scrollHeight;
   const sx = window.innerWidth / w;
   const sy = window.innerHeight / h;
   stageEl.style.transform = "scale(" + sx + "," + sy + ")";   // 非等比：完全填滿視窗、無留白
