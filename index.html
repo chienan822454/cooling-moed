@@ -480,7 +480,7 @@
     <div>資料來源：25_05_01-Sequence-of-Operation-for-HVAC_C6_20240828</div>
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
       <span>最後維護日期：2026-07-29</span>
-      <span>版本：V1.94</span>
+      <span>版本：V1.95</span>
     </div>
   </footer>
 </div><!-- /#stage -->
@@ -786,8 +786,8 @@ async function fetchWeather(){
     writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
     render();
     $("liveBadge").classList.add("show");   // 上方顯示 LIVE
-    clearTimeout(liveTimer);                 // 10 分鐘後自動解除 LIVE（資料視為過期）
-    liveTimer = setTimeout(function(){ $("liveBadge").classList.remove("show"); }, 600000);
+    clearTimeout(liveTimer);                 // 1 分鐘後自動解除 LIVE（資料視為過期）
+    liveTimer = setTimeout(function(){ $("liveBadge").classList.remove("show"); }, 60000);
     const time = c.time ? String(c.time).replace("T", " ") : "";
     const clamp = (t < 15) ? "（已依模擬器下限 15°C 夾限）" : "";
     status.innerHTML =
