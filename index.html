@@ -37,6 +37,19 @@
   .btn:hover { filter:brightness(1.08); }
   .btn:disabled { opacity:.55; cursor:default; }
   .wstatus { display:block; margin-top:8px; font-size:12px; color:var(--muted); line-height:1.7; }
+  /* LIVE 即時徽章 */
+  .live-badge { display:none; align-items:center; gap:6px; padding:3px 10px 3px 8px;
+                border-radius:999px; background:#7f1d1d33; border:1px solid #ef4444;
+                color:#fca5a5; font-size:13px; font-weight:700; letter-spacing:1px; vertical-align:middle; }
+  .live-badge.show { display:inline-flex; }
+  .live-badge .dot { width:8px; height:8px; border-radius:50%; background:#ef4444;
+                     box-shadow:0 0 0 0 #ef444488; animation:livePulse 1.4s ease-out infinite; }
+  @keyframes livePulse {
+    0%   { box-shadow:0 0 0 0 #ef4444aa; }
+    70%  { box-shadow:0 0 0 7px #ef444400; }
+    100% { box-shadow:0 0 0 0 #ef444400; }
+  }
+  @media (prefers-reduced-motion: reduce){ .live-badge .dot { animation:none !important; } }
   .mode-banner {
     text-align:center; padding:20px; border-radius:12px; margin-bottom:16px;
     font-size:22px; font-weight:700; border:2px solid;
@@ -147,6 +160,7 @@
   <!-- 風路示意圖 -->
   <div class="card">
     <h2 style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">風路示意圖
+      <span id="liveBadge" class="live-badge"><span class="dot"></span>LIVE</span>
       <span id="diagramMode" style="padding:4px 14px; border-radius:999px; font-size:14px; font-weight:700; border:2px solid; letter-spacing:.5px;">—</span>
       <span id="diagramCond" style="font-size:12px; font-weight:400; color:var(--muted); line-height:1.6;"></span>
     </h2>
@@ -367,11 +381,14 @@
     </svg>
     </div>
 
-    <div class="legend" style="margin-top:12px; display:flex; flex-wrap:wrap; justify-content:center; gap:8px 30px;">
-      <span><i style="background:#3b82f6"></i>冷送風</span>
-      <span><i style="background:#ef4444"></i>熱回風</span>
-      <span><i style="background:#1e40af"></i>冰水供水</span>
-      <span><i style="background:#7dd3fc"></i>冰水回水</span>
+    <div style="margin-top:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <button type="button" id="fetchWeather" class="btn" style="margin-top:0;">帶入龜山區即時天氣</button>
+      <div class="legend" style="flex:1; display:flex; flex-wrap:wrap; justify-content:center; gap:8px 30px;">
+        <span><i style="background:#3b82f6"></i>冷送風</span>
+        <span><i style="background:#ef4444"></i>熱回風</span>
+        <span><i style="background:#1e40af"></i>冰水供水</span>
+        <span><i style="background:#7dd3fc"></i>冰水回水</span>
+      </div>
     </div>
   </div>
 
@@ -379,7 +396,10 @@
     <!-- 參數輸入 -->
     <div class="card" style="margin-bottom:0;">
       <h2 style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><span>輸入參數</span>
-        <span class="cond" id="condText" style="margin:0; flex:1; text-align:right; min-width:170px; font-weight:400; text-transform:none; letter-spacing:normal;"></span>
+        <span style="flex:1; text-align:right; min-width:170px; font-weight:400; text-transform:none; letter-spacing:normal;">
+          <span class="cond" id="condText" style="margin:0; display:inline;"></span>
+          <span id="weatherStatus" class="wstatus" style="margin:0; display:none; color:var(--muted); font-size:12px;"></span>
+        </span>
       </h2>
 
       <div class="ctrl">
@@ -413,9 +433,6 @@
           手動 TRIM
         </label>
       </div>
-
-      <button type="button" id="fetchWeather" class="btn">帶入龜山區即時天氣</button>
-      <div id="weatherStatus" class="wstatus"></div>
     </div>
 
     <!-- 模式與設備狀態 -->
@@ -438,7 +455,7 @@
     <div>資料來源：25_05_01-Sequence-of-Operation-for-HVAC_C6_20240828</div>
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
       <span>最後維護日期：2026-07-29</span>
-      <span>版本：V1.1</span>
+      <span>版本：V1.41</span>
     </div>
   </footer>
 
@@ -677,16 +694,26 @@ function writeVal(sliderId, numId, val, dec){
 }
 function num(id){ return parseFloat($(id).value); }
 
+// 手動調整參數→隱藏已帶入的天氣，還原顯示目前條件（二選一）
+function clearLive(){
+  $("weatherStatus").innerHTML = "";
+  $("weatherStatus").style.display = "none";
+  $("condText").style.display = "inline";
+  $("liveBadge").classList.remove("show");
+}
+
 // 修改 OAT：保持 RH，重算 DP
 function editOAT(v){
   writeVal("oat", "oatNum", v, true);
   writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
+  clearLive();
   render();
 }
 // 修改 RH：保持 OAT，重算 DP
 function editRH(v){
   writeVal("oarh", "oarhNum", v, false);
   writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
+  clearLive();
   render();
 }
 // 修改 DP：保持 OAT，重算 RH（DP 不可高於 OAT）
@@ -694,6 +721,7 @@ function editDP(v){
   const oat = num("oat");
   writeVal("oadp", "oadpNum", Math.min(oat, v), true);
   writeVal("oarh", "oarhNum", calcRH(oat, num("oadp")), false);
+  clearLive();
   render();
 }
 
@@ -710,7 +738,9 @@ $("forceTrim").addEventListener("change", render);
 const SITE = { lat:25.0375, lon:121.3378 };   // 桃園市龜山區約略座標
 async function fetchWeather(){
   const status = $("weatherStatus");
-  const btn = $("fetchWeather"); btn.disabled = true; status.textContent = "查詢中…";
+  const btn = $("fetchWeather"); btn.disabled = true;
+  status.style.display = "inline"; $("condText").style.display = "none";   // 二選一：顯示已帶入，隱藏目前條件
+  status.textContent = "查詢中…";
   try {
     const url = "https://api.open-meteo.com/v1/forecast?latitude=" + SITE.lat +
       "&longitude=" + SITE.lon +
@@ -725,6 +755,7 @@ async function fetchWeather(){
     writeVal("oarh", "oarhNum", rh, false);
     writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
     render();
+    $("liveBadge").classList.add("show");   // 上方顯示 LIVE
     const time = c.time ? String(c.time).replace("T", " ") : "";
     const clamp = (t < 15) ? "（已依模擬器下限 15°C 夾限）" : "";
     status.innerHTML =
