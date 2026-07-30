@@ -478,10 +478,10 @@
   </div>
 
   <footer style="max-width:1100px; margin:16px auto 0; padding-top:10px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); line-height:1.8;">
-    <div>資料來源：25_05_01-Sequence-of-Operation-for-HVAC_C6_20240828</div>
+    <div>累積瀏覽次數：<span id="viewCount">—</span></div>
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-      <span>最後維護日期：2026-07-29</span>
-      <span>版本：V2.0</span>
+      <span>最後維護日期：2026-07-30</span>
+      <span>版本：V2.11</span>
     </div>
   </footer>
 </div><!-- /#stage -->
@@ -859,6 +859,16 @@ writeVal("oadp", "oadpNum", calcDP(num("oat"), num("oarh")), true);
 currentMode = initialMode(num("oat"), num("oadp"), num("oarh"), $("typhoon").checked, $("forceTrim").checked);
 render();
 if ($("autoWeather").checked) toggleAuto();   // 還原自動更新
+
+// 累積瀏覽次數（全站訪客共用，免費 abacus 計數服務）
+(function(){
+  try {
+    fetch("https://abacus.jasoncameron.dev/hit/chienan822454-cooling-moed/views")
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){ if (d && isFinite(d.value)) $("viewCount").textContent = Number(d.value).toLocaleString(); })
+      .catch(function(){});
+  } catch(e){}
+})();
 </script>
 </body>
 </html>
